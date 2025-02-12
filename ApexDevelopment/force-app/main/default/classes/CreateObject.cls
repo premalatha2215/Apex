@@ -3,7 +3,7 @@ public with sharing class CreateObject {
         Account account=new Account();
         account.Name='Humaira';
         account.Phone='3456789487';
-        insert account;
+        insert as user account;
     }
     public static void createMultipleAccount()
     {
@@ -15,6 +15,6 @@ public with sharing class CreateObject {
         account.Phone='01234567'+i;
         acc.add(account);
       }
-        insert acc;
+        insert as user acc;
     }
 }
