@@ -1,0 +1,106 @@
+Batch class executes large sets of data into smaller chucks asynchronously while staying within the sf governor limits
+Implements Database.Batchable interface 
+Database.Batchable interface have 3methods 
+start()-We collected the records either with a Database.QueryLocator or Iterable to pass them in the execute.
+execute()-We performed the logic on the collected data. It will run multiple times according to the batch size.
+finish()-We can do any post activities like sending emails.
+
+Question 1. Why do we use a batch class when we have other tools, such as a data loader, for operating on bulk data?
+1.Handle large data volumes
+Batch apex :eliminate governor limits
+dataloader:out of sf limits but need manual execution to create a data 
+
+2.aynchronous processing
+Batch apex: run in bg , doesnt affect ui
+DL:requires user to initiate and monitor the processing
+
+3.Automation and scheduling
+Batch Apex:Can be scheduled to run at specific times 
+dl:automated with scripts but lacks directly schedulingin sf
+
+4.Complex business logic 
+Batch apex:allow complex logic like conditional updates, calculation but DL Cant performe
+trigger and flows can process millions of record efficiently but BA Can 
+
+5.Error Handling 
+BA:provides error handling ,allowing partial filures without stopping the entire job
+DL:fails the whole operation if error occurs
+
+6.Security and user permission
+Question 2. What is the default and maximum size of the batch?
+default-200
+max-2000
+
+question 3.Can we call batch class from another batch class?
+Answer – Yes, we can call another batch class from a batch class in the finish method.
+
+Let’s say I have a batch with a total of 1000 records to execute, and the batch size is set to 200. This means that the processing will occur in 5 batches. If the first 4 batches are processed successfully but encounter an error in the 5th batch due to 4-5 records, the question is whether the entire batch is rolled back or only those 4-5 problematic records are rolled back.
+
+Answer – In this scenario, that entire batch is rolled back.
+
+Steps to Prevent Entire Batch Rollback:
+Use Try-Catch Block for Each Record → This ensures that if one record fails, the others in the batch still get processed.
+Store Failed Records Separately → Save error details in a custom object or log for later review.
+Continue Processing Other Records → This prevents the entire batch from failing.
+global class PreventBatchRollback implements Database.Batchable<SObject> {
+    
+    global Database.QueryLocator start(Database.BatchableContext BC) {
+        return Database.getQueryLocator('SELECT Id, Name FROM Account');
+    }
+ 
+    global void execute(Database.BatchableContext BC, List<Account> records) {
+        List<Account> successfulRecords = new List<Account>();
+        List<Failed_Record__c> failedRecords = new List<Failed_Record__c>(); // Custom object to log failures
+ 
+        for (Account acc : records) {
+            try {
+                // Simulating an error for specific conditions
+if (acc.Name.contains('Error')) {
+                    throw new Exception('Simulated Error');
+                }
+                successfulRecords.add(acc); // Add successful record
+            } catch (Exception e) {
+                // Log failed record details in a custom object
+                Failed_Record__c failed = new Failed_Record__c();
+failed.Record_Id__c = acc.Id;
+                failed.Error_Message__c = e.getMessage();
+                failedRecords.add(failed);
+            }
+        }
+ 
+        // Insert only successful records
+        if (!successfulRecords.isEmpty()) {
+            update successfulRecords;
+        }
+ 
+        // Log failed records separately
+        if (!failedRecords.isEmpty()) {
+            insert failedRecords;
+        }
+    }
+ 
+    global void finish(Database.BatchableContext BC) {
+        System.debug('Batch Execution Completed');
+    }
+}
+-------------------------------
+Can we call the future from batch class?
+Answer – No, we cannot call future methods from batch apex. As they operate differently. Mixing these can lead to unexpected behaviour.
+----------------------
+Question 9. How to make callouts from batch classes?
+Answer – To make callouts using batch class we need to implement Database.AllowsCallouts interface.
+-----------------------
+How many records can be retrieved via Database.QueryLocator?
+Answer – We can retrieve 50 Million records by using Database.QueryLocator.
+-----------------------------
+Monitor apex jon 
+setup->apex job
+Query 
+SELECT ID,status, JobItemsProcessed,NumberOfErrors FROM AsyncApexJob Where JobType='BatchApex'
+
+---------------------------------------------
+STATEFUL BATCH APEX-By default, eaxh batch execution in sf runs independently and does not share variables between batches.
+whenever you use Database.Stateful , sf  maintain instance var across executions, allowing you to store and track data throughout the batch job.
+Database.Stateful-retain data betweeen batch execution
+track progress across batches(count)
+accumulate result(total revenue)
