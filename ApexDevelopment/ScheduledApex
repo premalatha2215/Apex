@@ -1,0 +1,67 @@
+It is a type of asynchronous apex which used to run at a specific time. It runs in a separate thread.
+Implement Schedulable interface to a class
+It is very useful to perform daily tasks such as data cleanup, or any other logic that needs to be run at a particular time.
+We can call batch apex inside the Schedular to perform operations on large data sets to avoid hitting the governor limit.
+global void execute(SchedulableContext SC) {
+}
+KEY COMPONENT:
+1.Schedulable interface, ececute method
+2.CRON EXPERSSION :IS USED TO DEFINE THE SCHEDULE FOR A EXECUTION(SS:MM:HH:DAYOFMONTH:MONTH:DAYOFWEEK:YEAR)
+3.SYSTEM.SCHEDULE() METHOD THAT USED TO SCHEDULE THE CLASS EXECUTION PASSING THE CRON EXPERSSION AS PARAMETER (INVOKE METHOD LIKE DATABASE.EXCUTEBATCH());
+
+CRON EXPERSSION
+SECONDS(0-59)
+MINUTES(0-59)
+HOURS(0-23)
+DOM:1-31
+MM:1-12
+DOW:1-7
+YEAR(OPTIONAL)
+
+We have two options for scheduling our apex:
+
+Schedule job from UI
+Using System.schedule
+
+Schedule job from UI-setup->apex class->click on schedule apex-> job name, apex class,schedule the timing
+USING System.Schedule 
+
+We have to use the System.Schedule method to execute our Apex. 
+It takes 3 parameters which are Job Name, CRON expression which represents the frequency and Class Instance.
+ScheduleCleanOpportunity cleanOpptys = new ScheduleCleanOpportunity();
+String sch = '0 0 12 ? * FRI' ;
+String jobID = System.schedule('Clean closed opportunities', sch, cleanOpptys);
+
+From the above, except for seconds and minutes, all have some special characters which we can use to represent them. Let’s understand them one by one.
+
+ (,) It is used to specify more than one value like MON, FRI
+ (-) It specifies a range like JAN-FEB
+ (*) It specified all values. If we use this value for a month then it will run for every month
+ (?) It specifies no specific value. This option is only available for Day_of_month and Day_of_week.
+(/) It specifies the increment. like 1/6 so the number before the slash is the starting interval and the number after the slash is the interval amount.
+(L) It specifies the last value. Only available with Day_of_month and Day_of_week. For the Day_of_month it is the last day of the month and Day_of_week last day of the week is Saturday. For example, if we specify 3L that means last Tuesday.
+(W) It specifies the nearest weekday. Only available for Day_of_month.
+(#) It specifies the nth day of the month. Only available for the day of the week.
+--------------------
+SECOND MINUTES HOURS DAYOFMONTH MONTH DAYOFWEEK YEAR
+1.schedule a job everyday at midnight
+0 0 0 * * ?
+2.EVERY MON AT 9AM
+0 0 9 ? * MON 
+3.SCHEDULE JOB ON FIRST DAY OF EVERY MONTH AT 6:30 AM 
+0 30 6 1 * ?
+4.SCHEDULE AT 11:45PM ON THE FIRST AND LAST DAY OF EVERY MONTH
+0 45 23 1,L * ?
+5.SCHEDULE JOB EVERY 15 MINUTES
+0 0/15 0 * * * ?
+6. SCHEDULE A JOB AT NOON(12PM) EVERY WEDNESDAY 
+0 0 12 ? * WED ?
+7.SCHEDULE A JOB ON THE 15TH EVERY MONTH AT 8PM 
+0 0 20 15 * 
+8. EVERY SAT,SUN AT 10 AM 
+0 0 10 ? * SAT,SUN 
+9.schedule at 2:15pm on the last day of the month
+0 15 14 L * ?
+10. ON WEEKDAYS AT 5:45 AM 
+0 45 5 ? * MON-FRI
+11.
